@@ -1,0 +1,8 @@
+name: LCollection
+version: '1.0.0'
+main: io.github.lucfr1746.lcollection.LCollection
+api-version: '1.21'
+prefix: LCollection
+load: STARTUP
+authors: [ LucFr ]
+website: https://github.com/LucFr1746
