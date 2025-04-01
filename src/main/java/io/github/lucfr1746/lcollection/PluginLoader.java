@@ -1,11 +1,12 @@
 package io.github.lucfr1746.lcollection;
 
-import io.github.lucfr1746.lcollection.menu.FarmingMenu;
-import io.github.lucfr1746.lcollection.menu.MainMenu;
+import io.github.lucfr1746.lcollection.menu.ControlPanel;
 import io.github.lucfr1746.llibrary.LLibrary;
 import io.github.lucfr1746.llibrary.inventory.InventoryBuilder;
+import io.github.lucfr1746.llibrary.util.helper.FileAPI;
 import io.github.lucfr1746.llibrary.util.helper.Logger;
 import io.github.lucfr1746.shade.commandapi.*;
+import io.github.lucfr1746.shade.commandapi.arguments.Argument;
 import io.github.lucfr1746.shade.commandapi.arguments.ArgumentSuggestions;
 import io.github.lucfr1746.shade.commandapi.arguments.StringArgument;
 import org.bukkit.Bukkit;
@@ -21,18 +22,19 @@ class PluginLoader {
 
     private final Logger logger;
 
+    private final FileAPI file;
+
     private final List<InventoryBuilder> pluginGUis = new ArrayList<>();
 
     public PluginLoader(LCollection plugin) {
         this.plugin = plugin;
         this.logger = new Logger(this.plugin);
-
+        this.file = new FileAPI(this.plugin, true);
         registerCommands();
     }
 
     public void enable() {
-        this.pluginGUis.add(new MainMenu());
-        this.pluginGUis.add(new FarmingMenu());
+        this.pluginGUis.add(new ControlPanel());
     }
 
     public void disable() {
@@ -43,15 +45,36 @@ class PluginLoader {
         return this.logger;
     }
 
+    public FileAPI getFile() {
+        return this.file;
+    }
+
     private void registerCommands() {
         new CommandAPICommand("lcollection")
                 .withAliases("lcol")
-                .withArguments(new StringArgument("action")
-                        .replaceSuggestions(ArgumentSuggestions.stringsWithTooltips(info ->
-                                new IStringTooltip[]{
-                                        StringTooltip.ofString("reload", "Reload the plugin")
-                                }
-                        )))
+                .withSubcommand(getReloadCommand())
+                .withSubcommand(getEditorCommand())
+                .withArguments(getArguments())
+                .register();
+    }
+
+    private List<Argument<?>> getArguments() {
+        List<Argument<?>> arguments = new ArrayList<>();
+        arguments.add(new StringArgument("action")
+                .replaceSuggestions(ArgumentSuggestions.stringsWithTooltips(info ->
+                        new IStringTooltip[] {
+                                StringTooltip.ofString("reload", "Reload the plugin"),
+                                StringTooltip.ofString("editor", "Open control panel")
+                        }
+                ))
+        );
+        return arguments;
+    }
+
+    private CommandAPICommand getReloadCommand() {
+        return new CommandAPICommand("reload")
+                .withShortDescription("Reload the plugin")
+                .withPermission("lcollection.admin")
                 .executes((sender, args) -> {
                     boolean isPlayer = sender instanceof Player;
                     LCollection.getPluginLogger().info("Reloading LCollection...");
@@ -69,7 +92,15 @@ class PluginLoader {
                             if (isPlayer) sender.sendMessage(ChatColor.RED + "There was an error while reloading LCollection!");
                         }
                     });
-                })
-                .register();
+                });
+    }
+
+    private CommandAPICommand getEditorCommand() {
+        return new CommandAPICommand("editor")
+                .withShortDescription("Open Collection Control Panel")
+                .withPermission("lcollection.admin")
+                .executesPlayer((sender, args) -> {
+                    LLibrary.getInventoryManager().openGUI("COLLECTION_CONTROL_PANEL", sender);
+                });
     }
 }
